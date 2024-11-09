@@ -4,16 +4,14 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# Create engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.ENVIRONMENT == "development",
+    settings.DATABASE_URL, echo=True  # Set to False in production
 )
 
-AsyncSessionLocal = sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
+# Create session
+AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
 
 async def get_db():
     async with AsyncSessionLocal() as session:

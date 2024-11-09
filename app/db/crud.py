@@ -171,3 +171,50 @@ async def get_application_stats(db: AsyncSession, job_id: UUID) -> Dict:
         "average_match": sum(matches) / total,
         "high_match_count": high_matches,
     }
+
+
+async def get_application(
+    db: AsyncSession, user_id: UUID, job_id: UUID
+) -> Optional[JobApplication]:
+    """Get existing application"""
+    result = await db.execute(
+        select(JobApplication).where(
+            JobApplication.user_id == user_id, JobApplication.job_id == job_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def create_application(
+    db: AsyncSession,
+    user_id: UUID,
+    job_id: UUID,
+    match_scores: Dict,
+    cover_letter: Optional[str] = None,
+) -> JobApplication:
+    """Create new job application"""
+    application = JobApplication(
+        user_id=user_id,
+        job_id=job_id,
+        match_scores=match_scores,
+        cover_letter=cover_letter,
+        status="pending",
+    )
+    db.add(application)
+    await db.commit()
+    await db.refresh(application)
+    return application
+
+
+async def get_company_applications(
+    db: AsyncSession, company_id: UUID
+) -> List[JobApplication]:
+    """Get all applications for a company's jobs"""
+    result = await db.execute(
+        select(JobApplication)
+        .join(JobPosting)
+        .options(joinedload(JobApplication.user), joinedload(JobApplication.job))
+        .where(JobPosting.company_id == company_id)
+        .order_by(JobApplication.created_at.desc())
+    )
+    return result.scalars().all()

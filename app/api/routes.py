@@ -3,9 +3,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Optional
 from uuid import UUID
+from app.db.models import User  # Add this with the other imports
+
+# Add these imports to the top of routes.py
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+)  # You'll need to create these schemas
+from app.schemas.job import (
+    JobMatch,
+    JobApplication,
+)  # You'll need to create these schemas
+from datetime import datetime
+
 
 from app.db.database import get_db
 from app.db.crud import (
+    create_application,
+    get_application,
     get_user_by_email,
     get_or_create_user,
     update_user_assessment,
@@ -240,3 +255,273 @@ def process_assessment_answers(
             }
 
     return profile
+
+
+# User Management Routes
+@router.post("/users/", response_model=UserResponse)
+async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+    """Create a new user"""
+    existing_user = await get_user_by_email(db, user_data.email)
+    if existing_user:
+        return existing_user
+
+    user = await get_or_create_user(db, user_data.email, user_data.name)
+    return user
+
+
+@router.get("/users/{user_email}", response_model=UserResponse)
+async def get_user(user_email: str, db: AsyncSession = Depends(get_db)):
+    """Get user details"""
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+# Matching Routes
+@router.get("/jobs/{job_id}/match/{user_email}")
+async def get_job_match(
+    job_id: UUID, user_email: str, db: AsyncSession = Depends(get_db)
+):
+    """Get detailed match information for a specific job"""
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    job = await get_job_posting(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    company = await get_company_by_id(db, job.company_id)
+
+    # Get completed profiles
+    completed_profiles = get_completed_profiles(user)
+    if not completed_profiles:
+        raise HTTPException(
+            status_code=400, detail="Please complete at least one assessment first"
+        )
+
+    # Calculate match
+    match_score = matching_system.calculate_match(
+        completed_profiles,
+        {
+            "skills_requirements": job.skills_requirements,
+            "wellbeing_preferences": job.wellbeing_preferences,
+            "values_alignment": job.values_alignment,
+        },
+        {
+            "wellbeing_profile": company.wellbeing_profile,
+            "values_profile": company.values_profile,
+        },
+    )
+
+    return {
+        "job": {
+            "id": job.id,
+            "title": job.title,
+            "company": company.name,
+            "description": job.description,
+        },
+        "match_score": match_score,
+        "matched_dimensions": list(completed_profiles.keys()),
+    }
+
+
+# Job Application Routes
+@router.post("/jobs/{job_id}/apply")
+async def apply_to_job(
+    job_id: UUID,
+    user_email: str,
+    application_data: JobApplication,
+    db: AsyncSession = Depends(get_db),
+):
+    """Apply to a specific job"""
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    job = await get_job_posting(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Check if already applied
+    existing_application = await get_application(db, user.id, job_id)
+    if existing_application:
+        raise HTTPException(status_code=400, detail="Already applied to this job")
+
+    # Calculate match score
+    completed_profiles = get_completed_profiles(user)
+    company = await get_company_by_id(db, job.company_id)
+
+    match_score = matching_system.calculate_match(
+        completed_profiles,
+        {
+            "skills_requirements": job.skills_requirements,
+            "wellbeing_preferences": job.wellbeing_preferences,
+            "values_alignment": job.values_alignment,
+        },
+        {
+            "wellbeing_profile": company.wellbeing_profile,
+            "values_profile": company.values_profile,
+        },
+    )
+
+    # Create application
+    application = await create_application(
+        db,
+        user_id=user.id,
+        job_id=job_id,
+        match_scores=match_score,
+        cover_letter=application_data.cover_letter,
+    )
+
+    return {
+        "application_id": application.id,
+        "match_score": match_score,
+        "status": "submitted",
+    }
+
+
+@router.get("/users/{user_email}/applications")
+async def get_user_applications(user_email: str, db: AsyncSession = Depends(get_db)):
+    """Get all applications for a user"""
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    applications = await get_user_applications(db, user.id)
+
+    return [
+        {
+            "id": app.id,
+            "job": {
+                "id": app.job.id,
+                "title": app.job.title,
+                "company": app.job.company.name,
+            },
+            "status": app.status,
+            "match_score": app.match_scores,
+            "created_at": app.created_at,
+        }
+        for app in applications
+    ]
+
+
+# Company View Routes (if needed)
+@router.get("/companies/{company_id}/applications")
+async def get_company_applications(
+    company_id: UUID, db: AsyncSession = Depends(get_db)
+):
+    """Get all applications for a company's jobs"""
+    applications = await get_company_applications(db, company_id)
+
+    # Group by job and sort by match score
+    jobs_applications = {}
+    for app in applications:
+        if app.job.id not in jobs_applications:
+            jobs_applications[app.job.id] = {
+                "job": {"id": app.job.id, "title": app.job.title},
+                "applications": [],
+            }
+
+        jobs_applications[app.job.id]["applications"].append(
+            {
+                "id": app.id,
+                "applicant": {"email": app.user.email, "name": app.user.name},
+                "match_score": app.match_scores,
+                "status": app.status,
+                "created_at": app.created_at,
+            }
+        )
+
+    return jobs_applications
+
+
+# Matching Insights Routes
+@router.get("/users/{user_email}/matching-insights")
+async def get_user_matching_insights(
+    user_email: str, db: AsyncSession = Depends(get_db)
+):
+    """Get detailed matching insights for a user"""
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    completed_profiles = get_completed_profiles(user)
+    if not completed_profiles:
+        raise HTTPException(
+            status_code=400, detail="Please complete at least one assessment first"
+        )
+
+    # Get all jobs and calculate matches
+    jobs = await get_active_jobs(db)
+    matches = []
+
+    for job in jobs:
+        company = await get_company_by_id(db, job.company_id)
+        match_score = matching_system.calculate_match(
+            completed_profiles,
+            {
+                "skills_requirements": job.skills_requirements,
+                "wellbeing_preferences": job.wellbeing_preferences,
+                "values_alignment": job.values_alignment,
+            },
+            {
+                "wellbeing_profile": company.wellbeing_profile,
+                "values_profile": company.values_profile,
+            },
+        )
+        matches.append({"match_score": match_score, "job_type": job.title})
+
+    # Calculate insights
+    insights = {
+        "best_matches": sorted(
+            matches, key=lambda x: x["match_score"]["overall_match"], reverse=True
+        )[:3],
+        "completed_assessments": list(completed_profiles.keys()),
+        "strongest_dimensions": get_strongest_dimensions(completed_profiles),
+        "improvement_areas": get_improvement_areas(completed_profiles),
+    }
+
+    return insights
+
+
+# Helper function for insights
+def get_strongest_dimensions(profiles: Dict) -> List[Dict]:
+    """Get user's strongest dimensions across all profiles"""
+    strong_dimensions = []
+
+    for profile_type, profile in profiles.items():
+        for dimension, data in profile.items():
+            if data.get("score", 0) > 7:  # Consider scores > 7 as strong
+                strong_dimensions.append(
+                    {
+                        "dimension": dimension,
+                        "profile_type": profile_type,
+                        "score": data["score"],
+                        "title": data["title"],
+                    }
+                )
+
+    return sorted(strong_dimensions, key=lambda x: x["score"], reverse=True)[:5]
+
+
+def get_improvement_areas(profiles: Dict) -> List[Dict]:
+    """Get areas where user might want to improve"""
+    improvement_areas = []
+
+    for profile_type, profile in profiles.items():
+        for dimension, data in profile.items():
+            if (
+                data.get("score", 10) < 6
+            ):  # Consider scores < 6 as areas for improvement
+                improvement_areas.append(
+                    {
+                        "dimension": dimension,
+                        "profile_type": profile_type,
+                        "score": data["score"],
+                        "title": data["title"],
+                    }
+                )
+
+    return sorted(improvement_areas, key=lambda x: x["score"])[:5]

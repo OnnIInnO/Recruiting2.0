@@ -1,0 +1,276 @@
+# RECRUITING2.0 Developer Documentation
+
+## System Overview
+
+RECRUITING2.0 is a next-generation recruitment platform that matches candidates with jobs based on three core dimensions:
+1. Wellbeing preferences
+2. Skills assessment
+3. Values alignment
+
+### Key Features
+- Multi-dimensional assessment system
+- Flexible matching algorithm (works with partial assessments)
+- Job recommendations engine
+- Company culture insights
+- Simple user identification (email-based)
+
+## System Architecture
+
+### Project Structure
+```
+recruiting2/
+├── app/
+│   ├── api/           # API routes and endpoints
+│   ├── core/          # Core business logic
+│   ├── db/            # Database models and CRUD
+│   └── schemas/       # Data validation models
+├── alembic/           # Database migrations
+└── tests/             # Test suite
+
+```
+
+### Core Components
+
+1. **Assessment System** (`app/core/dimensions.py`)
+   - Defines three assessment types: Wellbeing, Skills, Values
+   - Each type has 6 dimensions with theoretical backing
+   - Questions and scoring mechanisms for each dimension
+   - Example dimension:
+   ```python
+   "AUTONOMY": {
+       "title": "Autonomy",
+       "description": "Degree of independence in work",
+       "theory": "Self-Determination Theory (Deci & Ryan)",
+       "questions": [...]
+   }
+   ```
+
+2. **Database Models** (`app/db/models.py`)
+   - User: Stores user information and assessment profiles
+   - Company: Company information and culture profiles
+   - JobPosting: Job listings with requirements
+   - JobApplication: Tracks applications and match scores
+
+3. **Matching System** (`app/core/matching.py`)
+   - Calculates match scores between candidates and jobs
+   - Supports partial matching (can match on available assessments)
+   - Weighted scoring system:
+     - Skills: 40%
+     - Wellbeing: 30%
+     - Values: 30%
+
+4. **API Routes** (`app/api/routes.py`)
+   - Assessment endpoints
+   - Profile management
+   - Job recommendations
+   - Application handling
+
+## Key Workflows
+
+### 1. Assessment Flow
+```mermaid
+graph LR
+    A[User Starts] --> B[Get Questions]
+    B --> C[Submit Answers]
+    C --> D[Process Scores]
+    D --> E[Update Profile]
+    E --> F[Get Recommendations]
+```
+
+Code Example:
+```python
+# Get assessment questions
+questions = await get_assessment_questions(AssessmentType.WELLBEING)
+
+# Submit assessment
+result = await submit_assessment(
+    assessment_type=AssessmentType.WELLBEING,
+    answers=user_answers,
+    user_email="user@example.com"
+)
+```
+
+### 2. Matching Process
+```mermaid
+graph TD
+    A[Get User Profile] --> B[Get Active Jobs]
+    B --> C[Calculate Matches]
+    C --> D[Sort Results]
+    D --> E[Return Top Matches]
+```
+
+Example Match Calculation:
+```python
+match_score = matching_system.calculate_match(
+    completed_profiles,      # User's completed assessments
+    job_requirements,        # Job requirements
+    company_profiles         # Company culture profiles
+)
+```
+
+### 3. Database Operations
+All database operations are centralized in `app/db/crud.py`:
+```python
+# Get or create user
+user = await get_or_create_user(db, email)
+
+# Update profile
+await update_user_assessment(db, user.id, assessment_type, profile)
+
+# Get recommendations
+recommendations = await get_user_recommendations(db, user.id)
+```
+
+## Working with the Code
+
+### Setting Up Development Environment
+1. Clone repository and install dependencies:
+```bash
+git clone [repository]
+cd recruiting2
+pip install -r requirements.txt
+```
+
+2. Set up database:
+```bash
+# Start PostgreSQL
+docker-compose up -d
+
+# Run migrations
+alembic upgrade head
+```
+
+3. Run development server:
+```bash
+uvicorn app.main:app --reload
+```
+
+### Making Changes
+
+1. **Adding New Assessment Questions**
+Update dimensions in `app/core/dimensions.py`:
+```python
+WELLBEING_DIMENSIONS = {
+    "NEW_DIMENSION": {
+        "title": "New Dimension",
+        "description": "Description",
+        "theory": "Theoretical background",
+        "questions": [
+            "Question 1?",
+            "Question 2?",
+            "Question 3?"
+        ]
+    }
+}
+```
+
+2. **Modifying Matching Logic**
+Update matching weights in `app/core/matching.py`:
+```python
+def calculate_match(self, profiles, requirements, company):
+    return {
+        'overall_match': weighted_average([
+            (skills_match, 0.4),
+            (wellbeing_match, 0.3),
+            (values_match, 0.3)
+        ])
+    }
+```
+
+3. **Adding New API Endpoints**
+Add routes in `app/api/routes.py`:
+```python
+@router.get("/new-endpoint")
+async def new_endpoint(
+    parameter: str,
+    db: AsyncSession = Depends(get_db)
+):
+    # Implementation
+    pass
+```
+
+### Common Tasks
+
+1. **Creating a New Assessment Type**
+- Add new enum in `AssessmentType`
+- Define dimensions and questions
+- Update matching logic
+- Add API endpoints
+
+2. **Modifying Match Calculations**
+- Update weights in matching system
+- Modify dimension scoring
+- Update recommendation logic
+
+3. **Adding Company Features**
+- Update company model
+- Add new endpoints
+- Modify matching logic
+
+## Testing
+
+1. Run tests:
+```bash
+pytest
+```
+
+2. Test specific components:
+```bash
+pytest tests/test_matching.py
+pytest tests/test_assessments.py
+```
+
+## Best Practices
+
+1. **Assessment Design**
+- Keep questions clear and concise
+- Ensure theoretical backing
+- Maintain consistent scoring scale (0-10)
+
+2. **Matching Logic**
+- Consider partial assessments
+- Normalize scores appropriately
+- Document weight changes
+
+3. **Database Operations**
+- Use CRUD utilities
+- Implement proper error handling
+- Maintain transaction integrity
+
+## Common Issues and Solutions
+
+1. **Profile Updates Not Reflecting**
+- Check transaction commits
+- Verify profile format
+- Ensure proper refresh after update
+
+2. **Match Scores Unexpected**
+- Verify weight calculations
+- Check dimension normalization
+- Validate profile completeness
+
+3. **Recommendations Not Updating**
+- Check caching if implemented
+- Verify job active status
+- Validate profile updates
+
+## Next Steps and Improvements
+
+1. Potential Enhancements:
+- Add authentication system
+- Implement caching
+- Add analytics dashboard
+- Create company user roles
+
+2. Performance Optimization:
+- Add database indexing
+- Implement batch processing
+- Optimize match calculations
+
+Would you like me to:
+1. Add more technical details?
+2. Create example implementation guides?
+3. Add troubleshooting sections?
+4. Create API documentation?
+
+This documentation provides a solid foundation for new developers to understand and work with the system.

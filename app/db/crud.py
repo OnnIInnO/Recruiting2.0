@@ -183,26 +183,6 @@ async def get_application(
     )
     return result.scalar_one_or_none()
 
-
-async def create_application(
-    db: AsyncSession,
-    user_id: UUID,
-    job_id: UUID,
-    match_scores: Dict,
-) -> JobApplication:
-    """Create new job application"""
-    application = JobApplication(
-        user_id=user_id,
-        job_id=job_id,
-        match_scores=match_scores,
-        status="pending",
-    )
-    db.add(application)
-    await db.commit()
-    await db.refresh(application)
-    return application
-
-
 async def get_company_applications(
     db: AsyncSession, company_id: UUID
 ) -> List[JobApplication]:

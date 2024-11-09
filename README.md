@@ -1,61 +1,135 @@
-# Recruiting2.0
+# RECRUITING2.0
 
-API for wellbeing-focused job matching platform
+Next generation recruitment platform focusing on holistic candidate-job matching.
 
-Planned project structure:
+## Features
 
-# recruiting2/
+- Multi-dimensional assessment system
+  - Wellbeing preferences
+  - Skills evaluation
+  - Values alignment
+- Sophisticated matching algorithm
+- Instant job recommendations
+- Company culture insights
 
-# README.md - Project documentation
+## Tech Stack
 
-# requirements.txt - Project dependencies
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Alembic (migrations)
+- Python 3.9+
 
-# .env - Environment variables
+## Setup
 
-# .gitignore - Git ignore file
+1. Clone the repository:
 
-# docker-compose.yml - Docker configuration
+```bash
+git clone [repository-url]
+cd recruiting2
+```
 
-# alembic.ini - Database migrations config
+2. Create and activate virtual environment:
 
-# /alembic
+```bash
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+```
 
-# /versions
+3. Install dependencies:
 
-# env.py
+```bash
+pip install -r requirements.txt
+```
 
-# /app
+4. Set up environment variables:
 
-# **init**.py
+```bash
+cp .env.example .env
+# Edit .env with your configurations
+```
 
-# main.py
+5. Start PostgreSQL database:
 
-# config.py
+```bash
+docker-compose up -d
+```
 
-# /api
+6. Run database migrations:
 
-# **init**.py
+```bash
+alembic upgrade head
+```
 
-# routes.py
+7. (Optional) Seed initial data:
 
-# /core
+```bash
+python -m app.db.seed
+```
 
-# **init**.py
+8. Start the application:
 
-# matching.py
+```bash
+uvicorn app.main:app --reload
+```
 
-# assessments.py
+## Development
 
-# /db
+### Running Tests
 
-# **init**.py
+```bash
+pytest
+```
 
-# database.py
+### Creating Migrations
 
-# models.py
+```bash
+alembic revision --autogenerate -m "description"
+alembic upgrade head
+```
 
-# /schemas
+### API Documentation
 
-# **init**.py
+Once the application is running, visit:
 
-# models.py
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Project Structure
+
+```
+recruiting2/
+├── alembic/                # Database migrations
+├── app/
+│   ├── api/               # API routes
+│   ├── core/              # Business logic
+│   ├── db/                # Database models and config
+│   ├── middleware/        # Middleware components
+│   └── schemas/           # Pydantic models
+├── tests/                 # Test files
+├── logs/                  # Application logs
+├── .env                   # Environment variables
+└── docker-compose.yml     # Docker configuration
+```
+
+## API Endpoints
+
+### Assessment
+
+- GET `/api/v1/assessments/{type}/questions` - Get assessment questions
+- POST `/api/v1/assessments/{type}/submit` - Submit assessment answers
+
+### Profile
+
+- GET `/api/v1/users/{email}/profile` - Get user profile
+- GET `/api/v1/users/{email}/recommendations` - Get job recommendations
+
+### Status
+
+- GET `/api/v1/users/{email}/assessment-status` - Check assessment completion
+
+## Contributing
+
+1. Create a new branch
+2. Make your changes
+3. Submit a pull request

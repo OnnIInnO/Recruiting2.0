@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from app.api import webhooks
 from app.api.routes import router, seed_router
 from app.config import get_settings
 from app.core.logging import setup_logging
@@ -50,6 +51,8 @@ app.add_exception_handler(SQLAlchemyError, database_exception_handler)
 # Routes
 app.include_router(router, prefix="/api/v1")
 app.include_router(seed_router, prefix="/admin")
+app.include_router(webhooks.router, prefix="/api/v1")
+
 
 if __name__ == "__main__":
     import uvicorn

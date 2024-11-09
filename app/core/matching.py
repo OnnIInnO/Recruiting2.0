@@ -1,141 +1,151 @@
-from typing import Dict, List, Tuple
-import numpy as np
-from .dimensions import AssessmentType, AssessmentDimensions
+# app/core/matching.py
+from typing import Dict, Any
 
 
 class MatchingSystem:
-    """
-    Handles matching logic between candidates and jobs/companies
-    """
-
-    def __init__(self):
-        self.dimensions = AssessmentDimensions()
-
-    def calculate_match(self, completed_profiles, job_requirements, company_profiles):
+    def calculate_match(
+        self, user_profiles: Dict, job_requirements: Dict, company_profiles: Dict
+    ) -> Dict[str, float]:
+        """Calculate overall match score based on available profiles"""
         matches = {}
-        total_weight = 0
+        weights = {"skills": 0.4, "wellbeing": 0.3, "values": 0.3}
 
-        # Calculate skills match if available
+        # Calculate individual dimension matches if profiles exist
         if (
-            "skills_profile" in completed_profiles
+            "skills_profile" in user_profiles
             and "skills_requirements" in job_requirements
         ):
             matches["skills_match"] = self._calculate_skills_match(
-                completed_profiles["skills_profile"],
-                job_requirements["skills_requirements"],
+                user_profiles["skills_profile"], job_requirements["skills_requirements"]
             )
-            total_weight += 0.4
 
-        # Calculate wellbeing match if available
         if (
-            "wellbeing_profile" in completed_profiles
+            "wellbeing_profile" in user_profiles
             and "wellbeing_preferences" in job_requirements
         ):
             matches["wellbeing_match"] = self._calculate_wellbeing_match(
-                completed_profiles["wellbeing_profile"],
+                user_profiles["wellbeing_profile"],
                 job_requirements["wellbeing_preferences"],
+                company_profiles.get("wellbeing_profile", {}),
             )
-            total_weight += 0.3
 
-        # Calculate values match if available
-        if (
-            "values_profile" in completed_profiles
-            and "values_profile" in company_profiles
-        ):
+        if "values_profile" in user_profiles and "values_alignment" in job_requirements:
             matches["values_match"] = self._calculate_values_match(
-                completed_profiles["values_profile"], company_profiles["values_profile"]
+                user_profiles["values_profile"],
+                job_requirements["values_alignment"],
+                company_profiles.get("values_profile", {}),
             )
-            total_weight += 0.3
 
-        # Calculate normalized overall match
+        # Calculate overall match score
+        total_weight = 0
+        weighted_sum = 0
+
+        if "skills_match" in matches:
+            weighted_sum += matches["skills_match"] * weights["skills"]
+            total_weight += weights["skills"]
+
+        if "wellbeing_match" in matches:
+            weighted_sum += matches["wellbeing_match"] * weights["wellbeing"]
+            total_weight += weights["wellbeing"]
+
+        if "values_match" in matches:
+            weighted_sum += matches["values_match"] * weights["values"]
+            total_weight += weights["values"]
+
+        # Normalize the overall score if we have any matches
         if total_weight > 0:
-            overall_match = (
-                sum(
-                    score * weight
-                    for score, weight in [
-                        (matches.get("skills_match", 0), 0.4),
-                        (matches.get("wellbeing_match", 0), 0.3),
-                        (matches.get("values_match", 0), 0.3),
-                    ]
-                    if score > 0
-                )
-                / total_weight
-            )
+            matches["overall_match"] = weighted_sum / total_weight
         else:
-            overall_match = 0
+            matches["overall_match"] = 0
 
-        return {
-            "overall_match": overall_match,
-            **matches,
-            "dimensions_matched": list(matches.keys()),
-        }
+        return matches
 
-    def _calculate_profile_match(
-        self, profile1: Dict, profile2: Dict, profile_type: AssessmentType
-    ) -> Dict:
-        """Calculate match between two profiles of same type"""
-        dimensions = self.dimensions.get_dimensions(profile_type)
-        dimension_matches = {}
-        dimension_scores = []
+    def _calculate_wellbeing_match(
+        self, user_profile: Dict, job_preferences: Dict, company_profile: Dict
+    ) -> float:
+        """Calculate match score for wellbeing dimensions"""
+        dimensions = [
+            "AUTONOMY",
+            "MASTERY",
+            "RELATEDNESS",
+            "WORK_LIFE",
+            "PURPOSE",
+            "PSYCHOLOGICAL_SAFETY",
+        ]
+        total_score = 0
+        counted_dimensions = 0
 
-        for dim_key, dimension in dimensions.items():
-            score1 = profile1.get(dim_key, {}).get("score", 0)
-            score2 = profile2.get(dim_key, {}).get("score", 0)
+        for dimension in dimensions:
+            user_score = 0
+            dimension_count = 0
 
-            # Calculate match score
-            if profile_type == AssessmentType.SKILLS:
-                # For skills, only penalize if candidate scores lower than requirement
-                match = max(0, 1 - max(0, score2 - score1) / 10)
+            # Calculate average score for the dimension from individual question scores
+            for i in range(1, 4):  # Assuming 3 questions per dimension
+                key = f"{dimension}_{i}"
+                if key in user_profile:
+                    user_score += user_profile[key]["score"]
+                    dimension_count += 1
+
+            if dimension_count > 0:
+                avg_user_score = user_score / dimension_count
+                # Compare with job preferences and company profile
+                job_pref = job_preferences.get(dimension, {}).get("minimum", 0)
+                company_score = company_profile.get(dimension, {}).get(
+                    "score", avg_user_score
+                )
+
+                # Calculate match as percentage of meeting or exceeding requirements
+                if job_pref > 0:
+                    dimension_match = min(1.0, avg_user_score / job_pref)
+                    total_score += dimension_match
+                    counted_dimensions += 1
+
+        if counted_dimensions > 0:
+            return total_score / counted_dimensions
+        return 0.0
+
+    def _calculate_skills_match(
+        self, user_profile: Dict, job_requirements: Dict
+    ) -> float:
+        """Calculate match score for skills"""
+        if not job_requirements:
+            return 1.0  # Perfect match if no requirements
+
+        total_score = 0
+        required_skills = len(job_requirements)
+
+        for skill, required_level in job_requirements.items():
+            user_level = user_profile.get(skill, {}).get("score", 0)
+            if user_level >= required_level:
+                total_score += 1
             else:
-                # For wellbeing and values, look for alignment within tolerance
-                match = 1 - abs(score1 - score2) / 10
+                total_score += user_level / required_level
 
-            dimension_matches[dim_key] = {
-                "match": match,
-                "title": dimension["title"],
-                "description": dimension["description"],
-            }
-            dimension_scores.append(match)
+        return total_score / required_skills if required_skills > 0 else 0.0
 
-        return {"overall": np.mean(dimension_scores), "dimensions": dimension_matches}
+    def _calculate_values_match(
+        self, user_profile: Dict, job_values: Dict, company_values: Dict
+    ) -> float:
+        """Calculate match score for values"""
+        total_score = 0
+        counted_values = 0
 
-    def _generate_insights(
-        self, wellbeing_match: Dict, skills_match: Dict, values_match: Dict
-    ) -> List[str]:
-        """Generate insights based on match scores"""
-        insights = []
+        # Compare user values with job and company values
+        for value in (
+            set(user_profile.keys())
+            | set(job_values.keys())
+            | set(company_values.keys())
+        ):
+            user_score = user_profile.get(value, {}).get("score", 0)
+            job_importance = job_values.get(value, {}).get("importance", 0)
+            company_score = company_values.get(value, {}).get("score", 0)
 
-        # Add specific insights based on strong matches or gaps
-        for match_type, match_data in [
-            ("Skills", skills_match),
-            ("Wellbeing", wellbeing_match),
-            ("Values", values_match),
-        ]:
-            for dim, data in match_data["dimensions"].items():
-                if data["match"] > 0.8:
-                    insights.append(
-                        f"Strong {match_type.lower()} match in {data['title']}"
-                    )
-                elif data["match"] < 0.6:
-                    insights.append(
-                        f"Consider alignment in {data['title']} "
-                        f"({data['description']})"
-                    )
+            if job_importance > 0:
+                # Calculate match considering both job importance and company alignment
+                value_match = min(
+                    1.0, (user_score * 0.5 + company_score * 0.5) / job_importance
+                )
+                total_score += value_match
+                counted_values += 1
 
-        return insights
-
-    def get_recommendations(
-        self, candidate_profiles: Dict, available_jobs: List[Dict]
-    ) -> List[Tuple[Dict, float]]:
-        """Get job recommendations sorted by match score"""
-        job_matches = []
-
-        for job in available_jobs:
-            match_score = self.calculate_match(
-                candidate_profiles, job["requirements"], job["company_profile"]
-            )
-            job_matches.append((job, match_score["overall_match"]))
-
-        # Sort by match score
-        job_matches.sort(key=lambda x: x[1], reverse=True)
-        return job_matches
+        return total_score / counted_values if counted_values > 0 else 0.0

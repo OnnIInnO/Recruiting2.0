@@ -201,15 +201,16 @@ async def get_user_recommendations(
     if not completed_profiles:
         return []
 
-    # Get all active jobs
-    jobs = await get_active_jobs(db)
+    # Get all active jobs with company information
+    query = select(JobPosting, Company).join(Company).limit(limit)
+
+    result = await db.execute(query)
+    # Use unique() to handle the eager loading
+    jobs_with_companies = result.unique().all()
 
     # Calculate matches based on completed assessments
     job_matches = []
-    for job in jobs:
-        # Get company data
-        company = await get_company_by_id(db, job.company_id)
-
+    for job, company in jobs_with_companies:
         # Prepare job requirements based on completed assessments
         job_requirements = {}
         if "skills_profile" in completed_profiles and job.skills_requirements:
@@ -240,9 +241,7 @@ async def get_user_recommendations(
                     "description": job.description,
                 },
                 "match_score": match_score,
-                "matched_dimensions": list(
-                    completed_profiles.keys()
-                ),  # Include which dimensions were matched
+                "matched_dimensions": list(completed_profiles.keys()),
             }
         )
 

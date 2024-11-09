@@ -1,10 +1,29 @@
-from pydantic import BaseModel
-from typing import Optional, Dict
+from pydantic import BaseModel, UUID4
+from typing import Optional
 from datetime import datetime
 
 
-class JobApplication(BaseModel):
+class JobApplicationBase(BaseModel):
+    user_id: UUID4
+    job_id: UUID4
     cover_letter: Optional[str] = None
+
+
+class JobApplicationCreate(JobApplicationBase):
+    pass
+
+
+class JobApplication(JobApplicationBase):
+    id: UUID4
+    created_at: datetime
+    status: str
+    skills_match: float
+    wellbeing_match: float
+    values_match: float
+    overall_match: float
+
+    class Config:
+        orm_mode = True
 
 
 class JobMatch(BaseModel):

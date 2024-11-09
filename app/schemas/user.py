@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, UUID4
 from typing import Optional
 
 
@@ -8,9 +8,9 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: UUID4
     email: str
     name: Optional[str] = None
 
     class Config:
-        from_attributes = True
+        orm_mode = True

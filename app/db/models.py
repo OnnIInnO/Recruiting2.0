@@ -77,4 +77,4 @@ class JobApplication(Base):
 
     # Relationships
     user = relationship("User", back_populates="applications")
-    job = relationship("JobPosting", back_populates="job")
+    job = relationship("JobPosting", back_populates="applications")

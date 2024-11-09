@@ -24,6 +24,9 @@ class User(Base):
     # Relationship
     applications = relationship("JobApplication", back_populates="user")
 
+    def __repr__(self):
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', created_at={self.created_at})>"
+
 
 class Company(Base):
     __tablename__ = "companies"
@@ -40,6 +43,8 @@ class Company(Base):
     # Relationships
     jobs = relationship("JobPosting", back_populates="company")
 
+    def __repr__(self):
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', created_at={self.created_at})>"
 
 class JobPosting(Base):
     __tablename__ = "job_postings"
@@ -59,6 +64,8 @@ class JobPosting(Base):
     company = relationship("Company", back_populates="jobs")
     applications = relationship("JobApplication", back_populates="job")
 
+    def __repr__(self):
+        return f"<JobPosting(id={self.id}, title='{self.title}', created_at={self.created_at}, company_id={self.company_id})>"
 
 class JobApplication(Base):
     __tablename__ = "job_applications"
@@ -78,3 +85,9 @@ class JobApplication(Base):
     # Relationships
     user = relationship("User", back_populates="applications")
     job = relationship("JobPosting", back_populates="applications")
+
+    def __repr__(self):
+        return (
+            f"<JobApplication(id={self.id}, user_id={self.user_id}, job_id={self.job_id}, "
+            f"status='{self.status}', created_at={self.created_at}, overall_match={self.overall_match})>"
+        )

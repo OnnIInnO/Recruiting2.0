@@ -79,10 +79,10 @@ class JobApplication(Base):
     status = Column(String, default="pending")
 
     # Match scores
-    skills_match = Column(Float)
-    wellbeing_match = Column(Float)
-    values_match = Column(Float)
-    overall_match = Column(Float)
+    skills_match = Column(Float, nullable=True)
+    wellbeing_match = Column(Float, nullable=True)
+    values_match = Column(Float, nullable=True)
+    overall_match = Column(Float, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="applications")

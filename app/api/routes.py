@@ -25,7 +25,7 @@ from datetime import datetime
 
 from app.db.database import get_db
 from app.db.crud import (
-    create_application,
+    create_job_application,
     get_application,
     get_user_by_email,
     get_or_create_user,
@@ -45,8 +45,13 @@ from app.schemas.assessment import (
 )
 
 from app.db.seed import seed_data
+import logging
 
 seed_router = APIRouter()
+
+# Set up logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @seed_router.post("/seed-data")
@@ -398,10 +403,8 @@ async def get_job_match(
 async def apply_to_job(
     job_id: UUID,
     user_email: str,
-    application_data: JobApplication,
     db: AsyncSession = Depends(get_db),
 ):
-    """Apply to a specific job"""
     user = await get_user_by_email(db, user_email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -433,12 +436,11 @@ async def apply_to_job(
     )
 
     # Create application
-    application = await create_application(
+    application = await create_job_application(
         db,
         user_id=user.id,
         job_id=job_id,
         match_scores=match_score,
-        cover_letter=application_data.cover_letter,
     )
 
     return {

@@ -112,9 +112,9 @@ async def create_job_application(
     application = JobApplication(
         user_id=user_id,
         job_id=job_id,
-        skills_match=match_scores.get("skills_match", {}).get("overall", 0),
-        wellbeing_match=match_scores.get("wellbeing_match", {}).get("overall", 0),
-        values_match=match_scores.get("values_match", {}).get("overall", 0),
+        skills_match=match_scores.get("skills_match", 0),
+        wellbeing_match=match_scores.get("wellbeing_match", 0),
+        values_match=match_scores.get("values_match", 0),
         overall_match=match_scores.get("overall_match", 0),
     )
     db.add(application)
@@ -189,14 +189,12 @@ async def create_application(
     user_id: UUID,
     job_id: UUID,
     match_scores: Dict,
-    cover_letter: Optional[str] = None,
 ) -> JobApplication:
     """Create new job application"""
     application = JobApplication(
         user_id=user_id,
         job_id=job_id,
         match_scores=match_scores,
-        cover_letter=cover_letter,
         status="pending",
     )
     db.add(application)

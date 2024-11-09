@@ -6,7 +6,6 @@ from datetime import datetime
 class JobApplicationBase(BaseModel):
     user_id: UUID4
     job_id: UUID4
-    cover_letter: Optional[str] = None
 
 
 class JobApplicationCreate(JobApplicationBase):

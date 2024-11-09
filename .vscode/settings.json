@@ -1,0 +1,14 @@
+{
+  "containerApps.deploymentConfigurations": [
+    {
+      "label": "recruiting2",
+      "type": "AcrDockerBuildRequest",
+      "dockerfilePath": "Dockerfile",
+      "srcPath": ".",
+      "envPath": ".env",
+      "resourceGroup": "recruiting",
+      "containerApp": "recruiting2",
+      "containerRegistry": "recruitingbf951e"
+    }
+  ]
+}

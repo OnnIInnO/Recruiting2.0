@@ -6,7 +6,10 @@ from typing import List, Dict, Optional
 from uuid import UUID
 from app.db.models import Company, JobPosting, User  # Add this with the other imports
 from sqlalchemy.orm import selectinload
+import logging
+import json
 
+logger = logging.getLogger(__name__)
 # Add these imports to the top of routes.py
 from app.schemas.company import CompanyResponse
 from app.schemas.user import (
@@ -191,41 +194,80 @@ async def get_user_recommendations(
     db: AsyncSession, user_id: UUID, limit: int = 10
 ) -> List[Dict]:
     """Get job recommendations based on completed assessments"""
+
     # Get user
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Get completed profiles
+    # Get completed profiles and log them
     completed_profiles = get_completed_profiles(user)
+
     if not completed_profiles:
         return []
 
     # Get all active jobs with company information
     query = select(JobPosting, Company).join(Company).limit(limit)
-
     result = await db.execute(query)
-    # Use unique() to handle the eager loading
     jobs_with_companies = result.unique().all()
 
     # Calculate matches based on completed assessments
     job_matches = []
     for job, company in jobs_with_companies:
+
         # Prepare job requirements based on completed assessments
         job_requirements = {}
         if "skills_profile" in completed_profiles and job.skills_requirements:
-            job_requirements["skills_requirements"] = job.skills_requirements
+            try:
+                if isinstance(job.skills_requirements, str):
+                    skills_req = json.loads(job.skills_requirements)
+                else:
+                    skills_req = job.skills_requirements
+                job_requirements["skills_requirements"] = skills_req
+            except Exception as e:
+                logger.error(f"Error processing skills requirements: {e}")
+
         if "wellbeing_profile" in completed_profiles and job.wellbeing_preferences:
-            job_requirements["wellbeing_preferences"] = job.wellbeing_preferences
+            try:
+                if isinstance(job.wellbeing_preferences, str):
+                    wellbeing_prefs = json.loads(job.wellbeing_preferences)
+                else:
+                    wellbeing_prefs = job.wellbeing_preferences
+                job_requirements["wellbeing_preferences"] = wellbeing_prefs
+            except Exception as e:
+                logger.error(f"Error processing wellbeing preferences: {e}")
+
         if "values_profile" in completed_profiles and job.values_alignment:
-            job_requirements["values_alignment"] = job.values_alignment
+            try:
+                if isinstance(job.values_alignment, str):
+                    values_align = json.loads(job.values_alignment)
+                else:
+                    values_align = job.values_alignment
+                job_requirements["values_alignment"] = values_align
+            except Exception as e:
+                logger.error(f"Error processing values alignment: {e}")
 
         # Prepare company profiles based on completed assessments
         company_profiles = {}
         if "wellbeing_profile" in completed_profiles and company.wellbeing_profile:
-            company_profiles["wellbeing_profile"] = company.wellbeing_profile
+            try:
+                if isinstance(company.wellbeing_profile, str):
+                    wellbeing_prof = json.loads(company.wellbeing_profile)
+                else:
+                    wellbeing_prof = company.wellbeing_profile
+                company_profiles["wellbeing_profile"] = wellbeing_prof
+            except Exception as e:
+                logger.error(f"Error processing company wellbeing profile: {e}")
+
         if "values_profile" in completed_profiles and company.values_profile:
-            company_profiles["values_profile"] = company.values_profile
+            try:
+                if isinstance(company.values_profile, str):
+                    values_prof = json.loads(company.values_profile)
+                else:
+                    values_prof = company.values_profile
+                company_profiles["values_profile"] = values_prof
+            except Exception as e:
+                logger.error(f"Error processing company values profile: {e}")
 
         # Calculate match score
         match_score = matching_system.calculate_match(
@@ -461,7 +503,14 @@ async def get_company_applications(
     return jobs_applications
 
 
-# Matching Insights Routes
+# app/api/routes.py
+from typing import List, Dict
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+
 @router.get("/users/{user_email}/matching-insights")
 async def get_user_matching_insights(
     user_email: str, db: AsyncSession = Depends(get_db)
@@ -477,12 +526,17 @@ async def get_user_matching_insights(
             status_code=400, detail="Please complete at least one assessment first"
         )
 
-    # Get all jobs and calculate matches
-    jobs = await get_active_jobs(db)
-    matches = []
+    # Get all jobs with companies in a single query
+    query = (
+        select(JobPosting, Company).join(Company).order_by(JobPosting.created_at.desc())
+    )
 
-    for job in jobs:
-        company = await get_company_by_id(db, job.company_id)
+    result = await db.execute(query)
+    jobs_with_companies = result.unique().all()
+
+    # Calculate matches
+    matches = []
+    for job, company in jobs_with_companies:
         match_score = matching_system.calculate_match(
             completed_profiles,
             {
@@ -495,38 +549,87 @@ async def get_user_matching_insights(
                 "values_profile": company.values_profile,
             },
         )
-        matches.append({"match_score": match_score, "job_type": job.title})
+        matches.append(
+            {
+                "match_score": match_score,
+                "job_type": job.title,
+                "company": company.name,
+                "job": {
+                    "id": job.id,
+                    "title": job.title,
+                    "company": company.name,
+                    "description": job.description,
+                },
+            }
+        )
+
+    # Sort matches by overall match score
+    sorted_matches = sorted(
+        matches, key=lambda x: x["match_score"]["overall_match"], reverse=True
+    )
 
     # Calculate insights
     insights = {
-        "best_matches": sorted(
-            matches, key=lambda x: x["match_score"]["overall_match"], reverse=True
-        )[:3],
+        "best_matches": sorted_matches[:3],
         "completed_assessments": list(completed_profiles.keys()),
         "strongest_dimensions": get_strongest_dimensions(completed_profiles),
         "improvement_areas": get_improvement_areas(completed_profiles),
+        "total_matches": len(matches),
+        "match_distribution": calculate_match_distribution(matches),
     }
 
     return insights
 
 
-# Helper function for insights
+def calculate_match_distribution(matches: List[Dict]) -> Dict:
+    """Calculate distribution of match scores in ranges"""
+    ranges = {
+        "excellent": 0,  # 90-100%
+        "very_good": 0,  # 80-89%
+        "good": 0,  # 70-79%
+        "fair": 0,  # 60-69%
+        "poor": 0,  # <60%
+    }
+
+    for match in matches:
+        score = match["match_score"]["overall_match"]
+        if score >= 0.9:
+            ranges["excellent"] += 1
+        elif score >= 0.8:
+            ranges["very_good"] += 1
+        elif score >= 0.7:
+            ranges["good"] += 1
+        elif score >= 0.6:
+            ranges["fair"] += 1
+        else:
+            ranges["poor"] += 1
+
+    # Convert to percentages
+    total = len(matches)
+    if total > 0:
+        for key in ranges:
+            ranges[key] = round((ranges[key] / total) * 100, 1)
+
+    return ranges
+
+
 def get_strongest_dimensions(profiles: Dict) -> List[Dict]:
     """Get user's strongest dimensions across all profiles"""
     strong_dimensions = []
 
     for profile_type, profile in profiles.items():
         for dimension, data in profile.items():
-            if data.get("score", 0) > 7:  # Consider scores > 7 as strong
-                strong_dimensions.append(
-                    {
-                        "dimension": dimension,
-                        "profile_type": profile_type,
-                        "score": data["score"],
-                        "title": data["title"],
-                    }
-                )
+            if isinstance(data, dict) and "score" in data:
+                if data["score"] >= 7:  # Consider scores >= 7 as strong
+                    strong_dimensions.append(
+                        {
+                            "dimension": dimension,
+                            "profile_type": profile_type,
+                            "score": data["score"],
+                        }
+                    )
 
+    # Sort by score and return top 5
     return sorted(strong_dimensions, key=lambda x: x["score"], reverse=True)[:5]
 
 
@@ -536,16 +639,15 @@ def get_improvement_areas(profiles: Dict) -> List[Dict]:
 
     for profile_type, profile in profiles.items():
         for dimension, data in profile.items():
-            if (
-                data.get("score", 10) < 6
-            ):  # Consider scores < 6 as areas for improvement
-                improvement_areas.append(
-                    {
-                        "dimension": dimension,
-                        "profile_type": profile_type,
-                        "score": data["score"],
-                        "title": data["title"],
-                    }
-                )
+            if isinstance(data, dict) and "score" in data:
+                if data["score"] <= 6:  # Consider scores <= 6 as areas for improvement
+                    improvement_areas.append(
+                        {
+                            "dimension": dimension,
+                            "profile_type": profile_type,
+                            "score": data["score"],
+                        }
+                    )
 
+    # Sort by score (ascending) and return bottom 5
     return sorted(improvement_areas, key=lambda x: x["score"])[:5]

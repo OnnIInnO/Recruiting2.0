@@ -39,6 +39,18 @@ from app.schemas.assessment import (
     MatchResponse,
 )
 
+from app.db.seed import seed_data
+
+seed_router = APIRouter()
+
+
+@seed_router.post("/seed-data")
+async def load_seed_data(db: AsyncSession = Depends(get_db)):
+    """Load initial seed data into the database"""
+    await seed_data(db)
+    return {"message": "Seed data loaded successfully"}
+
+
 router = APIRouter()
 matching_system = MatchingSystem()
 

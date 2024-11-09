@@ -25,7 +25,7 @@ class User(Base):
     applications = relationship("JobApplication", back_populates="user")
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', created_at={self.created_at})>"
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', created_at={self.created_at}, wellbeing_profile={self.wellbeing_profile}, skills_profile={self.skills_profile}, values_profile={self.values_profile})>"
 
 
 class Company(Base):
@@ -44,7 +44,7 @@ class Company(Base):
     jobs = relationship("JobPosting", back_populates="company")
 
     def __repr__(self):
-        return f"<User(id={self.id}, name='{self.name}')>"
+        return f"<User(id={self.id}, name='{self.name}', description='{self.description}'), industry='{self.industry}', wellbeing_profile={self.wellbeing_profile}, values_profile={self.values_profile})>"
 
 
 class JobPosting(Base):
@@ -66,7 +66,7 @@ class JobPosting(Base):
     applications = relationship("JobApplication", back_populates="job")
 
     def __repr__(self):
-        return f"<JobPosting(id={self.id}, title='{self.title}', created_at={self.created_at}, company_id={self.company_id})>"
+        return f"<JobPosting(id={self.id}, company_id={self.company_id}, title='{self.title}', description='{self.description}', created_at={self.created_at}, wellbeing_profile={self.wellbeing_preferences}, skills_profile={self.skills_requirements}, values_profile={self.values_alignment})>"
 
 
 class JobApplication(Base):
@@ -89,7 +89,4 @@ class JobApplication(Base):
     job = relationship("JobPosting", back_populates="applications")
 
     def __repr__(self):
-        return (
-            f"<JobApplication(id={self.id}, user_id={self.user_id}, job_id={self.job_id}, "
-            f"status='{self.status}', created_at={self.created_at}, overall_match={self.overall_match})>"
-        )
+        return f"<JobPosting(id={self.id}, user_id={self.user_id}, job_id='{self.job_id}', created_at={self.created_at}, status='{self.status}', skills_match={self.skills_match}, wellbeing_match={self.wellbeing_match}, values_match={self.values_match}, overall_match={self.overall_match})>"

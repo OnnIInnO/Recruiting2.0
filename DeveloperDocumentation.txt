@@ -274,3 +274,27 @@ Would you like me to:
 4. Create API documentation?
 
 This documentation provides a solid foundation for new developers to understand and work with the system.
+
+
+
+## Assesment answers waits for the answer to be like this "
+{
+"AUTONOMY_1": 8,
+"AUTONOMY_2": 7,
+"AUTONOMY_3": 9,
+"MASTERY_1": 7,
+"MASTERY_2": 8,
+"MASTERY_3": 6,
+"RELATEDNESS_1": 6,
+"RELATEDNESS_2": 7,
+"RELATEDNESS_3": 8,
+"WORK_LIFE_1": 8,
+"WORK_LIFE_2": 7,
+"WORK_LIFE_3": 8,
+"PURPOSE_1": 8,
+"PURPOSE_2": 7,
+"PURPOSE_3": 7,
+"PSYCHOLOGICAL_SAFETY_1": 7,
+"PSYCHOLOGICAL_SAFETY_2": 8,
+"PSYCHOLOGICAL_SAFETY_3": 7
+}"

@@ -44,7 +44,8 @@ class Company(Base):
     jobs = relationship("JobPosting", back_populates="company")
 
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', created_at={self.created_at})>"
+        return f"<User(id={self.id}, name='{self.name}')>"
+
 
 class JobPosting(Base):
     __tablename__ = "job_postings"
@@ -66,6 +67,7 @@ class JobPosting(Base):
 
     def __repr__(self):
         return f"<JobPosting(id={self.id}, title='{self.title}', created_at={self.created_at}, company_id={self.company_id})>"
+
 
 class JobApplication(Base):
     __tablename__ = "job_applications"

@@ -130,7 +130,6 @@ async def get_company_by_id(db: AsyncSession, company_id: UUID) -> Optional[Comp
     """
     result = await db.execute(
         select(Company)
-        .options(joinedload(Company.jobs))
         .where(Company.id == company_id)
     )
     return result.scalar_one_or_none()

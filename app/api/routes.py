@@ -9,6 +9,8 @@ from sqlalchemy.orm import selectinload
 import logging
 import json
 
+from app.schemas.table import TableRowResponse
+
 logger = logging.getLogger(__name__)
 # Add these imports to the top of routes.py
 from app.schemas.company import CompanyResponse
@@ -653,3 +655,67 @@ def get_improvement_areas(profiles: Dict) -> List[Dict]:
 
     # Sort by score (ascending) and return bottom 5
     return sorted(improvement_areas, key=lambda x: x["score"])[:5]
+
+
+@router.get("/users/{user_email}/job-table", response_model=List[TableRowResponse])
+async def get_job_table_data(
+    user_email: str, db: AsyncSession = Depends(get_db), limit: int = 10
+):
+    """Get job recommendations in a table format"""
+    # Get user and check if exists
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get completed profiles
+    completed_profiles = get_completed_profiles(user)
+    if not completed_profiles:
+        raise HTTPException(
+            status_code=400, detail="Please complete at least one assessment first"
+        )
+
+    # Get all jobs with companies in a single query
+    query = (
+        select(JobPosting, Company).join(Company).order_by(JobPosting.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    jobs_with_companies = result.unique().all()
+
+    # Calculate matches and format for table
+    table_rows = []
+    for job, company in jobs_with_companies:
+        # Calculate match scores
+        match_score = matching_system.calculate_match(
+            completed_profiles,
+            {
+                "skills_requirements": job.skills_requirements,
+                "wellbeing_preferences": job.wellbeing_preferences,
+                "values_alignment": job.values_alignment,
+            },
+            {
+                "wellbeing_profile": company.wellbeing_profile,
+                "values_profile": company.values_profile,
+            },
+        )
+
+        # Format data for table using existing data and placeholders
+        table_row = TableRowResponse(
+            company_name=company.name,
+            company_location=company.industry
+            or "Location TBD",  # Using industry as placeholder
+            company_logo_url="/api/placeholder/40/40",  # Placeholder image
+            job_title=job.title,
+            apply_link=str(job.id),  # Just use the ID, frontend can construct full URL
+            compatibility_score=match_score.get("overall_match", 0)
+            * 100,  # Convert to percentage
+            wellbeing_score=match_score.get("wellbeing_match", 0)
+            * 100,  # Convert to percentage
+            application_deadline="1.5.2025",  # Placeholder date
+        )
+        table_rows.append(table_row)
+
+    # Sort by compatibility score
+    table_rows.sort(key=lambda x: x.compatibility_score, reverse=True)
+
+    return table_rows[:limit]

@@ -1,27 +1,33 @@
-from pydantic import BaseModel
-from typing import List
-from app.db.models import Company, JobPosting
+# app/schemas/company.py
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional, Dict
+from datetime import datetime
+from uuid import UUID
 
 
 class JobPostingResponse(BaseModel):
-    id: str
-    company_id: str
+    id: UUID
+    company_id: UUID
     title: str
-    description: str
-    created_at: str
-    skills_requirements: dict
-    wellbeing_preferences: dict
-    values_alignment: dict
+    description: Optional[str] = None
+    created_at: datetime
+    skills_requirements: Optional[Dict] = None
+    wellbeing_preferences: Optional[Dict] = None
+    values_alignment: Optional[Dict] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_encoders={UUID: str, datetime: lambda v: v.isoformat()},
+    )
 
 
 class CompanyResponse(BaseModel):
-    id: str
+    id: UUID
     name: str
-    description: str
-    industry: str
-    wellbeing_profile: dict
-    values_profile: dict
+    description: Optional[str] = None
+    industry: Optional[str] = None
+    wellbeing_profile: Optional[Dict] = None
+    values_profile: Optional[Dict] = None
     jobs: List[JobPostingResponse]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True, json_encoders={UUID: str})

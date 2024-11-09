@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Optional
 from uuid import UUID
 from app.db.models import Company, JobPosting, User  # Add this with the other imports
+from sqlalchemy.orm import selectinload
 
 # Add these imports to the top of routes.py
 from app.schemas.company import CompanyResponse
@@ -30,6 +31,7 @@ from app.db.crud import (
     get_job_posting,
     get_company_by_id,
 )
+from sqlalchemy.util._concurrency_py3k import greenlet_spawn
 from app.core.dimensions import AssessmentDimensions, AssessmentType
 from app.core.matching import MatchingSystem
 from app.schemas.assessment import (
@@ -58,23 +60,9 @@ matching_system = MatchingSystem()
 @router.get("/companies", response_model=List[CompanyResponse])
 async def get_all_companies(db: AsyncSession = Depends(get_db)):
     """Get a list of all companies and their job postings"""
-    companies = await get_all_companies_with_jobs(db)
-    return companies
-
-
-async def get_all_companies_with_jobs(db: AsyncSession):
-    """Fetch all companies and their associated job postings"""
-    companies_query = select(Company)
-    companies = await db.execute(companies_query)
-    companies = companies.scalars().all()
-
-    for company in companies:
-        job_postings_query = select(JobPosting).where(
-            JobPosting.company_id == company.id
-        )
-        job_postings = await db.execute(job_postings_query)
-        company.jobs = job_postings.scalars().all()
-
+    query = select(Company).options(selectinload(Company.jobs))
+    result = await db.execute(query)
+    companies = result.scalars().all()
     return companies
 
 

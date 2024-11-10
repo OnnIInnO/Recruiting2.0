@@ -17,7 +17,7 @@ async def get_all_rows(table):
                 print(row)
 
 async def main():
-    await get_all_rows(User)  # Pass the model class, not a string
+    await get_all_rows(JobPosting)  # Pass the model class, not a string
 
 if __name__ == "__main__":
     asyncio.run(main())

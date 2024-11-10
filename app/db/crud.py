@@ -183,7 +183,7 @@ async def get_application(
     )
     return result.scalar_one_or_none()
 
-async def get_company_applications(
+async def get_applications_by_company(
     db: AsyncSession, company_id: UUID
 ) -> List[JobApplication]:
     """Get all applications for a company's jobs"""

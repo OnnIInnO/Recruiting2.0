@@ -31,6 +31,7 @@ from app.db.crud import (
     get_application,
     get_user_by_email,
     get_or_create_user,
+    get_applications_by_company,
     update_user_assessment,
     get_active_jobs,
     get_job_posting,
@@ -489,7 +490,7 @@ async def get_company_applications(
     company_id: UUID, db: AsyncSession = Depends(get_db)
 ):
     """Get all applications for a company's jobs"""
-    applications = await get_company_applications(db, company_id)
+    applications = await get_applications_by_company(db, company_id)
 
     # Group by job and sort by match score
     jobs_applications = {}
@@ -504,7 +505,10 @@ async def get_company_applications(
             {
                 "id": app.id,
                 "applicant": {"email": app.user.email, "name": app.user.name},
-                "match_score": app.match_scores,
+                "skills_match": app.skills_match,
+                "wellbeing_match": app.wellbeing_match,
+                "values_match": app.values_match,
+                "overall_match": app.overall_match,
                 "status": app.status,
                 "created_at": app.created_at,
             }

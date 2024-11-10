@@ -314,6 +314,8 @@ def process_assessment_answers(
     for dimension in dimensions:
         dimension_answers[dimension] = []
 
+    print(answers)
+
     for question_id, score in answers.items():
         # Extract dimension from question_id
         dimension = question_id.split("_")[0]

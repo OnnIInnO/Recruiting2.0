@@ -55,7 +55,7 @@ class AssessmentDimensions:
                 "How important is a sense of belonging at work?",
             ],
         },
-        "WORK_LIFE": {
+        "WORKLIFE": {
             "title": "Work-Life Balance",
             "description": "Balance between work and personal life",
             "theory": "Based on Work-Life Border Theory (Clark). Assesses preferred boundaries between work and personal life.",
@@ -75,7 +75,7 @@ class AssessmentDimensions:
                 "How important is alignment with company mission?",
             ],
         },
-        "PSYCHOLOGICAL_SAFETY": {
+        "PSYCHOLOGICALSAFETY": {
             "title": "Psychological Safety",
             "description": "Feeling safe to take risks and be authentic",
             "theory": "Based on Edmondson's Psychological Safety Framework. Measures need for supportive, trust-based environment.",

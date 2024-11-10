@@ -775,11 +775,11 @@ async def get_dimension_comparison(
             "company_profile": company.values_profile,
             "dimensions": [
                 "TECHNICAL",
-                "COMMUNICATION",
-                "LEADERSHIP",
                 "PROBLEMSOLVING",
-                "TEAMWORK",
-                "INNOVATION",
+                "COMMUNICATION",
+                "ADAPTABILITY",
+                "COLLABORATION",
+                "LEADERSHIP",
             ],
         },
         "values": {
@@ -787,10 +787,10 @@ async def get_dimension_comparison(
             "job_profile": job.values_alignment,
             "company_profile": company.values_profile,
             "dimensions": [
-                "ETHICS",
                 "INNOVATION",
-                "DIVERSITY",
                 "SUSTAINABILITY",
+                "DIVERSITY",
+                "ETHICS",
                 "GROWTH",
                 "IMPACT",
             ],

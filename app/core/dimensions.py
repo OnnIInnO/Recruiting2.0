@@ -115,7 +115,7 @@ class AssessmentDimensions:
             "questions": [
                 "How effective are you at presenting ideas clearly?",
                 "How skilled are you in written communication?",
-                "How good are you at handling difficult conversations?",
+                "How well do you handle difficult conversations?",
             ],
         },
         "ADAPTABILITY": {
@@ -166,7 +166,7 @@ class AssessmentDimensions:
             "description": "Commitment to environmental and social responsibility",
             "theory": "Based on Corporate Sustainability Theory. Measures alignment with sustainable practices.",
             "questions": [
-                "How important is environmental responsibility?",
+                "How important is a company's environmental impact to you?",
                 "How much do you value sustainable business practices?",
                 "How important is social impact in business?",
             ],

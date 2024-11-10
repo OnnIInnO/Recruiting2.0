@@ -35,6 +35,8 @@ class Company(Base):
     name = Column(String, nullable=False)
     description = Column(String)
     industry = Column(String)
+    location = Column(String)  # Added location
+    logo_url = Column(String)  # Added logo URL
 
     # Company profiles
     wellbeing_profile = Column(JSON, nullable=True)
@@ -44,7 +46,9 @@ class Company(Base):
     jobs = relationship("JobPosting", back_populates="company")
 
     def __repr__(self):
-        return f"<User(id={self.id}, name='{self.name}', description='{self.description}'), industry='{self.industry}', wellbeing_profile={self.wellbeing_profile}, values_profile={self.values_profile})>"
+        return (
+            f"<Company(id={self.id}, name='{self.name}', location='{self.location}')>"
+        )
 
 
 class JobPosting(Base):
@@ -56,6 +60,11 @@ class JobPosting(Base):
     description = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # New fields
+    salary_range = Column(String)  # e.g., "$120k - $180k"
+    remote_policy = Column(String)  # "Full Remote", "Hybrid", or "In-Office"
+    application_deadline = Column(String)  # e.g., "2024-04-30"
+
     # Job requirements profiles
     skills_requirements = Column(JSON, nullable=True)
     wellbeing_preferences = Column(JSON, nullable=True)
@@ -66,7 +75,7 @@ class JobPosting(Base):
     applications = relationship("JobApplication", back_populates="job")
 
     def __repr__(self):
-        return f"<JobPosting(id={self.id}, company_id={self.company_id}, title='{self.title}', description='{self.description}', created_at={self.created_at}, wellbeing_profile={self.wellbeing_preferences}, skills_profile={self.skills_requirements}, values_profile={self.values_alignment})>"
+        return f"<JobPosting(id={self.id}, title='{self.title}', salary_range='{self.salary_range}', remote_policy='{self.remote_policy}')>"
 
 
 class JobApplication(Base):

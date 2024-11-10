@@ -1,18 +1,29 @@
 # app/core/dimensions.py
 from enum import Enum
 from typing import Dict, List
+from pydantic import BaseModel
+from typing import List
+
 
 class AssessmentType(str, Enum):
     WELLBEING = "wellbeing"
     SKILLS = "skills"
     VALUES = "values"
 
+
+class DimensionComparisonResponse(BaseModel):
+    dimension_names: List[str]
+    user_scores: List[float]
+    job_scores: List[float]
+    company_scores: List[float]  # Optional, if you want company comparison too
+
+
 class AssessmentDimensions:
     """
     Complete definition of all assessment dimensions with their theoretical background
     and corresponding questions
     """
-    
+
     WELLBEING_DIMENSIONS = {
         "AUTONOMY": {
             "title": "Autonomy",
@@ -21,8 +32,8 @@ class AssessmentDimensions:
             "questions": [
                 "How much freedom do you need in deciding how to do your work?",
                 "How important is it for you to set your own schedule?",
-                "How much independence do you prefer in your role?"
-            ]
+                "How much independence do you prefer in your role?",
+            ],
         },
         "MASTERY": {
             "title": "Growth & Mastery",
@@ -31,8 +42,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is continuous learning in your work?",
                 "How much do you value opportunities to master new skills?",
-                "How important is regular feedback for your growth?"
-            ]
+                "How important is regular feedback for your growth?",
+            ],
         },
         "RELATEDNESS": {
             "title": "Social Connection",
@@ -41,8 +52,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is team collaboration to you?",
                 "How much do you value building connections with colleagues?",
-                "How important is a sense of belonging at work?"
-            ]
+                "How important is a sense of belonging at work?",
+            ],
         },
         "WORK_LIFE": {
             "title": "Work-Life Balance",
@@ -51,8 +62,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is maintaining clear work-life boundaries?",
                 "How much do you value flexible working arrangements?",
-                "How important is having time for personal life and recovery?"
-            ]
+                "How important is having time for personal life and recovery?",
+            ],
         },
         "PURPOSE": {
             "title": "Purpose & Meaning",
@@ -61,8 +72,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is it that your work feels meaningful?",
                 "How much do you value making a positive impact through your work?",
-                "How important is alignment with company mission?"
-            ]
+                "How important is alignment with company mission?",
+            ],
         },
         "PSYCHOLOGICAL_SAFETY": {
             "title": "Psychological Safety",
@@ -71,9 +82,9 @@ class AssessmentDimensions:
             "questions": [
                 "How important is feeling safe to express opinions at work?",
                 "How much do you value a supportive management style?",
-                "How important is having an inclusive work environment?"
-            ]
-        }
+                "How important is having an inclusive work environment?",
+            ],
+        },
     }
 
     SKILLS_DIMENSIONS = {
@@ -84,8 +95,8 @@ class AssessmentDimensions:
             "questions": [
                 "How would you rate your technical expertise in your field?",
                 "How comfortable are you with learning new technical tools?",
-                "How experienced are you with industry-specific software/tools?"
-            ]
+                "How experienced are you with industry-specific software/tools?",
+            ],
         },
         "PROBLEM_SOLVING": {
             "title": "Problem Solving",
@@ -94,8 +105,8 @@ class AssessmentDimensions:
             "questions": [
                 "How skilled are you at breaking down complex problems?",
                 "How good are you at finding innovative solutions?",
-                "How well do you handle ambiguous situations?"
-            ]
+                "How well do you handle ambiguous situations?",
+            ],
         },
         "COMMUNICATION": {
             "title": "Communication",
@@ -104,8 +115,8 @@ class AssessmentDimensions:
             "questions": [
                 "How effective are you at presenting ideas clearly?",
                 "How skilled are you in written communication?",
-                "How good are you at handling difficult conversations?"
-            ]
+                "How good are you at handling difficult conversations?",
+            ],
         },
         "ADAPTABILITY": {
             "title": "Adaptability",
@@ -114,8 +125,8 @@ class AssessmentDimensions:
             "questions": [
                 "How quickly do you adapt to new situations?",
                 "How well do you handle unexpected changes?",
-                "How fast do you learn new skills and processes?"
-            ]
+                "How fast do you learn new skills and processes?",
+            ],
         },
         "COLLABORATION": {
             "title": "Collaboration",
@@ -124,8 +135,8 @@ class AssessmentDimensions:
             "questions": [
                 "How effective are you at working in teams?",
                 "How well do you collaborate across departments?",
-                "How good are you at building consensus?"
-            ]
+                "How good are you at building consensus?",
+            ],
         },
         "LEADERSHIP": {
             "title": "Leadership",
@@ -134,9 +145,9 @@ class AssessmentDimensions:
             "questions": [
                 "How effective are you at leading projects or teams?",
                 "How good are you at motivating others?",
-                "How well do you handle team conflicts?"
-            ]
-        }
+                "How well do you handle team conflicts?",
+            ],
+        },
     }
 
     VALUES_DIMENSIONS = {
@@ -147,8 +158,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is working in an innovative environment?",
                 "How much do you value creative problem-solving?",
-                "How important is experimenting with new ideas?"
-            ]
+                "How important is experimenting with new ideas?",
+            ],
         },
         "SUSTAINABILITY": {
             "title": "Sustainability",
@@ -157,8 +168,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is environmental responsibility?",
                 "How much do you value sustainable business practices?",
-                "How important is social impact in business?"
-            ]
+                "How important is social impact in business?",
+            ],
         },
         "DIVERSITY": {
             "title": "Diversity & Inclusion",
@@ -167,8 +178,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is workplace diversity to you?",
                 "How much do you value inclusive practices?",
-                "How important is equal opportunity?"
-            ]
+                "How important is equal opportunity?",
+            ],
         },
         "ETHICS": {
             "title": "Ethics & Integrity",
@@ -177,8 +188,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is ethical business conduct?",
                 "How much do you value transparency?",
-                "How important is integrity in decision-making?"
-            ]
+                "How important is integrity in decision-making?",
+            ],
         },
         "GROWTH": {
             "title": "Growth Mindset",
@@ -187,8 +198,8 @@ class AssessmentDimensions:
             "questions": [
                 "How important is continuous organizational learning?",
                 "How much do you value professional development?",
-                "How important is embracing challenges?"
-            ]
+                "How important is embracing challenges?",
+            ],
         },
         "IMPACT": {
             "title": "Social Impact",
@@ -197,9 +208,9 @@ class AssessmentDimensions:
             "questions": [
                 "How important is making a positive societal impact?",
                 "How much do you value community engagement?",
-                "How important is contributing to social good?"
-            ]
-        }
+                "How important is contributing to social good?",
+            ],
+        },
     }
 
     @classmethod
@@ -218,17 +229,20 @@ class AssessmentDimensions:
         """Get all questions for an assessment type with dimension context"""
         dimensions = cls.get_dimensions(assessment_type)
         questions = []
-        
+
         for dim_key, dimension in dimensions.items():
             for q in dimension["questions"]:
-                questions.append({
-                    "dimension": dim_key,
-                    "dimension_title": dimension["title"],
-                    "question": q,
-                    "theory": dimension["theory"]
-                })
-        
+                questions.append(
+                    {
+                        "dimension": dim_key,
+                        "dimension_title": dimension["title"],
+                        "question": q,
+                        "theory": dimension["theory"],
+                    }
+                )
+
         return questions
+
 
 # Example scoring function
 def calculate_dimension_score(answers: List[int]) -> float:
@@ -237,17 +251,18 @@ def calculate_dimension_score(answers: List[int]) -> float:
         return 0.0
     return sum(answers) / len(answers)
 
+
 # Example profile generation
 def generate_profile(answers: Dict[str, List[int]], dimensions: Dict) -> Dict:
     """Generate profile from answers, calculating scores for each dimension"""
     profile = {}
-    
+
     for dim_key, dimension in dimensions.items():
         if dim_key in answers:
             profile[dim_key] = {
                 "score": calculate_dimension_score(answers[dim_key]),
                 "title": dimension["title"],
-                "description": dimension["description"]
+                "description": dimension["description"],
             }
-    
+
     return profile

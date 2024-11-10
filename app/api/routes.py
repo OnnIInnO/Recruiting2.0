@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 import logging
 import json
 
-from app.schemas.table import TableRowResponse
+from app.schemas.table import TableDataResponse, TableRowResponse
 
 logger = logging.getLogger(__name__)
 # Add these imports to the top of routes.py
@@ -37,7 +37,11 @@ from app.db.crud import (
     get_company_by_id,
 )
 from sqlalchemy.util._concurrency_py3k import greenlet_spawn
-from app.core.dimensions import AssessmentDimensions, AssessmentType
+from app.core.dimensions import (
+    AssessmentDimensions,
+    AssessmentType,
+    DimensionComparisonResponse,
+)
 from app.core.matching import MatchingSystem
 from app.schemas.assessment import (
     AssessmentResponse,
@@ -657,7 +661,7 @@ def get_improvement_areas(profiles: Dict) -> List[Dict]:
     return sorted(improvement_areas, key=lambda x: x["score"])[:5]
 
 
-@router.get("/users/{user_email}/job-table", response_model=List[TableRowResponse])
+@router.get("/users/{user_email}/job-table", response_model=TableDataResponse)
 async def get_job_table_data(
     user_email: str, db: AsyncSession = Depends(get_db), limit: int = 10
 ):
@@ -702,20 +706,118 @@ async def get_job_table_data(
         # Format data for table using existing data and placeholders
         table_row = TableRowResponse(
             company_name=company.name,
-            company_location=company.industry
-            or "Location TBD",  # Using industry as placeholder
-            company_logo_url="/api/placeholder/40/40",  # Placeholder image
+            company_location=company.industry or "Location TBD",
+            company_logo_url="/api/placeholder/40/40",
             job_title=job.title,
-            apply_link=str(job.id),  # Just use the ID, frontend can construct full URL
-            compatibility_score=match_score.get("overall_match", 0)
-            * 100,  # Convert to percentage
-            wellbeing_score=match_score.get("wellbeing_match", 0)
-            * 100,  # Convert to percentage
-            application_deadline="1.5.2025",  # Placeholder date
+            apply_link=str(job.id),
+            compatibility_score=match_score.get("overall_match", 0) * 100,
+            wellbeing_score=match_score.get("wellbeing_match", 0) * 100,
+            application_deadline="1.5.2025",
         )
         table_rows.append(table_row)
 
     # Sort by compatibility score
     table_rows.sort(key=lambda x: x.compatibility_score, reverse=True)
 
-    return table_rows[:limit]
+    return TableDataResponse(jobs=table_rows[:limit], total=len(table_rows))
+
+
+@router.get(
+    "/users/{user_email}/job-comparison/{job_id}/{dimension_type}",
+    response_model=DimensionComparisonResponse,
+)
+async def get_dimension_comparison(
+    user_email: str,
+    job_id: UUID,
+    dimension_type: str,  # 'wellbeing', 'skills', or 'values'
+    db: AsyncSession = Depends(get_db),
+):
+    """Get dimension-by-dimension comparison between user and job+company"""
+    # Get user
+    user = await get_user_by_email(db, user_email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get job and company
+    query = select(JobPosting, Company).join(Company).where(JobPosting.id == job_id)
+    result = await db.execute(query)
+    job_company = result.unique().first()
+
+    if not job_company:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job, company = job_company
+
+    # Get the appropriate profiles based on dimension type
+    dimension_map = {
+        "wellbeing": {
+            "user_profile": user.wellbeing_profile,
+            "job_profile": job.wellbeing_preferences,
+            "company_profile": company.wellbeing_profile,
+            "dimensions": [
+                "AUTONOMY",
+                "MASTERY",
+                "RELATEDNESS",
+                "WORK_LIFE",
+                "PURPOSE",
+                "PSYCHOLOGICAL_SAFETY",
+            ],
+        },
+        "skills": {
+            "user_profile": user.skills_profile,
+            "job_profile": job.skills_requirements,
+            "company_profile": company.values_profile,
+            "dimensions": [
+                "TECHNICAL",
+                "COMMUNICATION",
+                "LEADERSHIP",
+                "PROBLEM_SOLVING",
+                "TEAMWORK",
+                "INNOVATION",
+            ],
+        },
+        "values": {
+            "user_profile": user.values_profile,
+            "job_profile": job.values_alignment,
+            "company_profile": company.values_profile,
+            "dimensions": [
+                "ETHICS",
+                "INNOVATION",
+                "DIVERSITY",
+                "SUSTAINABILITY",
+                "GROWTH",
+                "IMPACT",
+            ],
+        },
+    }
+
+    if dimension_type not in dimension_map:
+        raise HTTPException(status_code=400, detail="Invalid dimension type")
+
+    profiles = dimension_map[dimension_type]
+    dimensions = profiles["dimensions"]
+
+    # Extract scores for each dimension
+    user_scores = []
+    job_scores = []
+    company_scores = []
+
+    for dimension in dimensions:
+        # Get user score
+        user_dim = profiles["user_profile"].get(dimension, {})
+        user_scores.append(user_dim.get("score", 0))
+
+        # Get job score - either direct score or minimum requirement
+        job_dim = profiles["job_profile"].get(dimension, {})
+        job_scores.append(job_dim.get("score", 0))
+
+        # Get company score
+        company_dim = profiles["company_profile"].get(dimension, {})
+        company_scores.append(company_dim.get("score", 0))
+
+    return DimensionComparisonResponse(
+        dimension_names=dimensions,
+        user_scores=user_scores,
+        job_scores=job_scores,
+        company_scores=company_scores,
+    )

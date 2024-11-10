@@ -98,7 +98,7 @@ class AssessmentDimensions:
                 "How experienced are you with industry-specific software/tools?",
             ],
         },
-        "PROBLEM_SOLVING": {
+        "PROBLEMSOLVING": {
             "title": "Problem Solving",
             "description": "Analytical and creative problem-solving abilities",
             "theory": "Based on Complex Problem Solving Theory. Assesses analytical and creative thinking capabilities.",
